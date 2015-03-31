@@ -1,15 +1,5 @@
-# Pymorm
-Really simple pymongo-based ORM for MongoDB. The only requirements are Bunch and, obviously, pymongo.
+__author__ = 'walter'
 
-# Updates
-
-Added `__defaults__` property in `MongoObject`, used to declare default values for documents.
-The fields in `__defaults__` can also be callable. The callable will be called the first time the document is 
-retrieved through the library.
-
-## Example
-
-```
 from pymorm import MongoObject, MongoObjectMeta
 from pymongo import MongoClient
 
@@ -37,14 +27,8 @@ class Test(MongoObject):
 
 user = Test.add({})
 user2 = Test.add({"username": "Walter"})
-user2.happiness = "a lot!"
+user.happiness = "a lot!"
 print user
 print user2
 user.commit()
-
-> User(_id=ObjectId('5519e5eb5dde7310f04d9bbe'), happiness=u'poor', username=u'Test') 
-> User(_id=ObjectId('5519e5eb5dde7310f04d9bbe'), happiness=u'a lot!', username=u'Walter') 
-
-```
-
-# Enjoy!
+Test.query.remove()

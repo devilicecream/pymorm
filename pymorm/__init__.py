@@ -44,6 +44,14 @@ class MongoObjectMeta(type):
 
 
 class MongoObject(Bunch):
+    __defaults__ = {}
+
+    def __init__(self, *args, **kw):
+        super(MongoObject, self).__init__(*args, **kw)
+        for key, value in self.__defaults__.items():
+            if not self.get(key):
+                self[key] = hasattr(value, '__call__') and value() or value
+
     @classmethod
     def add(cls, document):
         new_id = ObjectId(cls.query.insert(document))
@@ -54,6 +62,7 @@ class MongoObject(Bunch):
         return [d for d in cls.query.find(*args, **kw)]
 
     def commit(self, silent_fail=True):
+        print dict(self)
         result = self.__class__.query.update({"_id": self._id}, dict(self))
         if not silent_fail and result.updatedExisting is not True:
             raise OperationFailure("The document to update doesn't exist anymore. "
