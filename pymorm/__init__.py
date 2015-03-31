@@ -54,7 +54,7 @@ class MongoObject(Bunch):
 
     @classmethod
     def add(cls, document):
-        new_id = ObjectId(cls.query.insert(document))
+        new_id = ObjectId(cls.query.insert(cls(document)))
         return cls.query.find_one({"_id": new_id})
 
     @classmethod
