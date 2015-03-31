@@ -34,6 +34,7 @@ setup(
                  "Topic :: Database :: Front-Ends",
                  "Topic :: Software Development :: Libraries :: Python Modules",
                  "Intended Audience :: Developers"],
+    url="https://github.com/devilicecream/pymorm",
     packages=find_packages(),
     keywords='mongodb pymongo simple orm',
     dependency_links=dependency_links,
