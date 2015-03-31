@@ -31,5 +31,6 @@ user.happiness = "a lot!"
 print user
 print user2
 user.commit()
-print Test.get_all({})
+assert user.remove() == 1, "Problem with delete"
+assert len(Test.get_all({})) == 1, "Something went wrong, the number of documents is %s" % len(Test.get_all({}))
 Test.query.remove()

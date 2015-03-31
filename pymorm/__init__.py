@@ -61,6 +61,12 @@ class MongoObject(Bunch):
     def get_all(cls, *args, **kw):
         return [d for d in cls.query.find(*args, **kw)]
 
+    def remove(self):
+        result = self.__class__.query.remove({"_id": self._id})
+        if not result.ok:
+            raise OperationFailure("Can not delete the document")
+        return result.n
+
     def commit(self, silent_fail=True):
         result = self.__class__.query.update({"_id": self._id}, self)
         if not silent_fail and result.updatedExisting is not True:
