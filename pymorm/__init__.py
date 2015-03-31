@@ -62,8 +62,7 @@ class MongoObject(Bunch):
         return [d for d in cls.query.find(*args, **kw)]
 
     def commit(self, silent_fail=True):
-        print dict(self)
-        result = self.__class__.query.update({"_id": self._id}, dict(self))
+        result = self.__class__.query.update({"_id": self._id}, self)
         if not silent_fail and result.updatedExisting is not True:
             raise OperationFailure("The document to update doesn't exist anymore. "
                                    "Updates to the `_id` field are not allowed through `commit`.")

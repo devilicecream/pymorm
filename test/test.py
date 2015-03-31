@@ -31,4 +31,5 @@ user.happiness = "a lot!"
 print user
 print user2
 user.commit()
+print Test.get_all({})
 Test.query.remove()
