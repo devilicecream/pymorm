@@ -3,20 +3,35 @@ from bunch import *
 from pymongo.cursor import Cursor
 from pymongo.errors import OperationFailure
 from bson import ObjectId
+import logging
+
+log = logging.getLogger('pymorm')
 
 __all__ = ["MongoObject", "MongoObjectMeta"]
 
 
 class CollectionMethod(object):
-    def __init__(self, mappedclass, method):
+    def __init__(self, mappedclass, method, debug=False):
         self.mappedclass = mappedclass
         self.method = method
+        self.debug = debug
+
+    def log_query(self, cursor, query, parameters):
+        explain = cursor.explain()
+        msg = "%s - Query: %s.%s%s Query parameters: %s" % (explain['cursor'], self.method.im_self.name,
+                                                            self.method.__name__, query, parameters)
+        if 'Basic' in explain['cursor']:
+            log.warning(msg)
+        else:
+            log.debug(msg)
 
     def __call__(self, *args, **kwargs):
         result = self.method(*args, **kwargs)
         if isinstance(result, dict) and result.get('_id'):
             return self.mappedclass(result)
         elif isinstance(result, Cursor):
+            if self.debug:
+                self.log_query(result, args, kwargs)
             # trick to map Cursor.next() on the appropriate mapped class.
             result.next = self.map_cursor(result.next)
         return result
@@ -28,18 +43,19 @@ class CollectionMethod(object):
 
 
 class Query(object):
-    def __init__(self, mappedclass, collection):
+    def __init__(self, mappedclass, collection, debug):
         self.mappedclass = mappedclass
         self.collection = collection
+        self.debug = debug
 
     def __getattr__(self, item):
-        return CollectionMethod(self.mappedclass, getattr(self.collection, item))
+        return CollectionMethod(self.mappedclass, getattr(self.collection, item), self.debug)
 
 
 class MongoObjectMeta(type):
     def __new__(mcs, *args, **kwargs):
         result = type(*args)
-        result.query = Query(result, result.__collection__)
+        result.query = Query(result, result.__collection__, result.__debug_queries__)
         try:
             mcs.resolve_indexes(result)
         except:
@@ -77,6 +93,7 @@ class MongoObject(Bunch):
     __defaults__ = {}
     __indexes__ = []
     __unique_indexes__ = []
+    __debug_queries__ = False
 
     def __init__(self, *args, **kw):
         super(MongoObject, self).__init__(*args, **kw)
