@@ -1,7 +1,7 @@
 __author__ = 'walter'
 
 from pymorm import MongoObject, MongoObjectMeta
-from pymongo import MongoClient
+from pymongo import MongoClient, ASCENDING, DESCENDING
 
 db = MongoClient("mongodb://localhost:27017/pymorm").get_default_database()
 
@@ -9,6 +9,8 @@ db = MongoClient("mongodb://localhost:27017/pymorm").get_default_database()
 class Test(MongoObject):
     __metaclass__ = MongoObjectMeta
     __collection__ = db.tests
+    __indexes__ = [('test', ASCENDING), ('walter', DESCENDING)]
+    __unique_indexes__ = [[('test', DESCENDING), ('_id', DESCENDING)]]
 
     __defaults__ = {"username": "Test",
                     "happiness": lambda: "poor"}

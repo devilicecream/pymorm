@@ -14,7 +14,7 @@ class CollectionMethod(object):
 
     def __call__(self, *args, **kwargs):
         result = self.method(*args, **kwargs)
-        if isinstance(result, dict):
+        if isinstance(result, dict) and result.get('_id'):
             return self.mappedclass(result)
         elif isinstance(result, Cursor):
             # trick to map Cursor.next() on the appropriate mapped class.
@@ -40,11 +40,43 @@ class MongoObjectMeta(type):
     def __new__(mcs, *args, **kwargs):
         result = type(*args)
         result.query = Query(result, result.__collection__)
+        try:
+            mcs.resolve_indexes(result)
+        except:
+            raise OperationFailure("Can not resolve the indexes. ")
         return result
+
+    @classmethod
+    def resolve_indexes(mcs, cls):
+        existing_indexes = filter(lambda x: not x[1].get('unique') and not x[0] == '_id_',
+                                  cls.query.index_information().items())
+        existing_unique_indexes = filter(lambda x: x[1].get('unique'),
+                                         cls.query.index_information().items())
+        # Normalize indexes
+        indexes = [i if hasattr(i[0], '__iter__') else [i] for i in cls.__indexes__]
+        unique_indexes = [i if hasattr(i[0], '__iter__') else [i] for i in cls.__unique_indexes__]
+
+        def check_indexes(_indexes, _existing, unique):
+            for index in _existing:
+                key = index[1]['key']
+                if key in _indexes:
+                    # Existing index
+                    _indexes.remove(key)
+                else:
+                    # Stray index
+                    cls.query.drop_index(index[0])
+            for new_index in _indexes:
+                # New index
+                cls.query.create_index(new_index, unique=unique)
+
+        check_indexes(indexes, existing_indexes, unique=False)
+        check_indexes(unique_indexes, existing_unique_indexes, unique=True)
 
 
 class MongoObject(Bunch):
     __defaults__ = {}
+    __indexes__ = []
+    __unique_indexes__ = []
 
     def __init__(self, *args, **kw):
         super(MongoObject, self).__init__(*args, **kw)
@@ -63,9 +95,9 @@ class MongoObject(Bunch):
 
     def remove(self):
         result = self.__class__.query.remove({"_id": self._id})
-        if not result.ok:
+        if not result['ok']:
             raise OperationFailure("Can not delete the document")
-        return result.n
+        return result['n']
 
     def commit(self, silent_fail=True):
         result = self.__class__.query.update({"_id": self._id}, self)
