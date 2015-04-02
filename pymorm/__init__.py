@@ -3,11 +3,33 @@ from bunch import *
 from pymongo.cursor import Cursor
 from pymongo.errors import OperationFailure
 from bson import ObjectId
+import types
 import logging
 
 log = logging.getLogger('pymorm')
 
 __all__ = ["MongoObject", "MongoObjectMeta"]
+
+
+class MappedCursorIterator(object):
+    """
+    Monkeypatching the `Cursor` class iterator allows returning
+    a <mappedclass> instance instead of a dictionary as result for a query.
+    """
+    def __init__(self, cursor):
+        self.cursor = cursor
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        if hasattr(self.cursor, 'mappedclass'):
+            return self.cursor.mappedclass(next(self.cursor))
+        return next(self.cursor)
+
+Cursor.__iter__ = lambda x: MappedCursorIterator(x)
+Cursor.first = types.MethodType(lambda x: x.mappedclass(next(x)), None, Cursor)
+Cursor.all = types.MethodType(lambda x: [d for d in x], None, Cursor)
 
 
 class CollectionMethod(object):
@@ -32,14 +54,8 @@ class CollectionMethod(object):
         elif isinstance(result, Cursor):
             if self.debug:
                 self.log_query(result, args, kwargs)
-            # trick to map Cursor.next() on the appropriate mapped class.
-            result.next = self.map_cursor(result.next)
+            result.mappedclass = self.mappedclass
         return result
-
-    def map_cursor(self, next):
-        def _do_map_cursor():
-            return self.mappedclass(next())
-        return _do_map_cursor
 
 
 class Query(object):
@@ -58,7 +74,8 @@ class MongoObjectMeta(type):
         result.query = Query(result, result.__collection__, result.__debug_queries__)
         try:
             mcs.resolve_indexes(result)
-        except:
+        except Exception as e:
+            print e
             raise OperationFailure("Can not resolve the indexes. ")
         return result
 
@@ -108,7 +125,8 @@ class MongoObject(Bunch):
 
     @classmethod
     def get_all(cls, *args, **kw):
-        return [d for d in cls.query.find(*args, **kw)]
+        cursor = cls.query.find(*args, **kw)
+        return [d for d in cursor]
 
     def remove(self):
         result = self.__class__.query.remove({"_id": self._id})
