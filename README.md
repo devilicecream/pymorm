@@ -3,9 +3,11 @@ Really simple pymongo-based ORM for MongoDB. The only requirements are Bunch and
 
 # Updates
 
-Added `__defaults__` property in `MongoObject`, used to declare default values for documents.
-The fields in `__defaults__` can also be callable. The callable will be called the first time the document is 
-retrieved through the library.
+    * 0.3.0   Added `__defaults__` property in `MongoObject`, used to declare default values for documents.
+              The fields in `__defaults__` can also be callable. The callable will be called the first time the document is 
+              retrieved through the library.
+    
+    * 0.3.3   Cleaner mapping for returned documents. No need to monkeypatch the Cursor class anymore
 
 ## Example
 

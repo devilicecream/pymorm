@@ -1,81 +1,71 @@
 __author__ = 'walter'
 from bunch import *
-from pymongo.cursor import Cursor
 from pymongo.errors import OperationFailure
+from pymongo.son_manipulator import SONManipulator
 from bson import ObjectId
-import types
 import logging
 
 log = logging.getLogger('pymorm')
 
-__all__ = ["MongoObject", "MongoObjectMeta"]
+__all__ = ["MongoObject", "MongoObjectMeta", "Document"]
 
 
-class MappedCursorIterator(object):
+class MappedSONManipulator(SONManipulator):
+    """Mapped SON Manipulator.
+
+    Will convert the outgoing SON to a <mappedclass> object
     """
-    Monkeypatching the `Cursor` class iterator allows returning
-    a <mappedclass> instance instead of a dictionary as result for a query.
-    """
-    def __init__(self, cursor):
-        self.cursor = cursor
+    def will_copy(self):
+        return False
 
-    def __iter__(self):
-        return self
+    def transform_outgoing(self, son, collection):
+        """Manipulate an outgoing SON object.
 
-    def next(self):
-        if hasattr(self.cursor, 'mappedclass'):
-            return self.cursor.mappedclass(next(self.cursor))
-        return next(self.cursor)
-
-Cursor.__iter__ = lambda x: MappedCursorIterator(x)
-Cursor.first = types.MethodType(lambda x: x.mappedclass(next(x)), None, Cursor)
-Cursor.all = types.MethodType(lambda x: [d for d in x], None, Cursor)
+        :Parameters:
+          - `son`: the SON object being retrieved from the database
+          - `collection`: the collection this object was stored in
+        """
+        if not isinstance(collection.mappedclass, collection.__class__) and hasattr(son, '_id'):
+            return collection.mappedclass(son)
+        return son
 
 
 class CollectionMethod(object):
-    def __init__(self, mappedclass, method, debug=False):
-        self.mappedclass = mappedclass
+    def __init__(self, collection, method):
+        self.collection = collection
         self.method = method
-        self.debug = debug
-
-    def log_query(self, cursor, query, parameters):
-        explain = cursor.explain()
-        msg = "%s - Query: %s.%s%s Query parameters: %s" % (explain['cursor'], self.method.im_self.name,
-                                                            self.method.__name__, query, parameters)
-        if 'Basic' in explain['cursor']:
-            log.warning(msg)
-        else:
-            log.debug(msg)
 
     def __call__(self, *args, **kwargs):
-        result = self.method(*args, **kwargs)
-        if isinstance(result, dict) and result.get('_id'):
-            return self.mappedclass(result)
-        elif isinstance(result, Cursor):
-            if self.debug:
-                self.log_query(result, args, kwargs)
-            result.mappedclass = self.mappedclass
+        result = getattr(self.collection, self.method)(*args, **kwargs)
+        if type(result) == dict:
+            #print result, type(result)
+            return Document(result)
         return result
 
 
 class Query(object):
-    def __init__(self, mappedclass, collection, debug):
-        self.mappedclass = mappedclass
+    def __init__(self, collection):
         self.collection = collection
-        self.debug = debug
 
     def __getattr__(self, item):
-        return CollectionMethod(self.mappedclass, getattr(self.collection, item), self.debug)
+        return CollectionMethod(self.collection, item)
+
+
+class Document(Bunch):
+    pass
 
 
 class MongoObjectMeta(type):
     def __new__(mcs, *args, **kwargs):
         result = type(*args)
-        result.query = Query(result, result.__collection__, result.__debug_queries__)
+        result.__collection__.mappedclass = result
+        result.__collection__.database.connection.document_class = Document
+        result.__collection__.database.add_son_manipulator(MappedSONManipulator())
+        result.query = Query(result.__collection__)
         try:
             mcs.resolve_indexes(result)
         except Exception as e:
-            print e
+            log.error(e)
             raise OperationFailure("Can not resolve the indexes. ")
         return result
 
@@ -106,11 +96,10 @@ class MongoObjectMeta(type):
         check_indexes(unique_indexes, existing_unique_indexes, unique=True)
 
 
-class MongoObject(Bunch):
+class MongoObject(Document):
     __defaults__ = {}
     __indexes__ = []
     __unique_indexes__ = []
-    __debug_queries__ = False
 
     def __init__(self, *args, **kw):
         super(MongoObject, self).__init__(*args, **kw)

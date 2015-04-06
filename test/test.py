@@ -1,7 +1,8 @@
 __author__ = 'walter'
 
-from pymorm import MongoObject, MongoObjectMeta
+from pymorm import MongoObject, MongoObjectMeta, Document
 from pymongo import MongoClient, ASCENDING, DESCENDING
+
 
 db = MongoClient("mongodb://localhost:27017/pymorm").get_default_database()
 
@@ -26,13 +27,18 @@ class Test(MongoObject):
     def test_classmethod(cls):
         return cls.__name__
 
-
-user = Test.add({})
-user2 = Test.add({"username": "Walter"})
-user.happiness = "a lot!"
-print user
-print user2
-user.commit()
-assert user.remove() == 1, "Problem with delete"
-assert len(Test.get_all({})) == 1, "Something went wrong, the number of documents is %s" % len(Test.get_all({}))
-Test.query.remove()
+try:
+    user = Test.add({})
+    user2 = Test.add({"username": "Walter"})
+    user.happiness = "a lot!"
+    print user
+    print user2
+    user.commit()
+    assert [d for d in Test.query.find({})][0].__class__ == Test
+    assert [d for d in Test.query.find({}).skip(1).limit(1)][0].__class__ == Test
+    assert next(Test.query.find({}).skip(1).limit(1)). __class__ == Test
+    assert Test.query.find({}).skip(1).limit(1).explain().__class__ == Document
+    assert user.remove() == 1, "Problem with delete"
+    assert len(Test.get_all({})) == 1, "Something went wrong, the number of documents is %s" % len(Test.get_all({}))
+finally:
+    assert Test.query.remove({}).__class__ == Document
