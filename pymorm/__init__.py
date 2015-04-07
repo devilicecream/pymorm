@@ -46,9 +46,14 @@ class Query(object):
     def __init__(self, collection):
         self.collection = collection
 
-    def find_and_modify(self, *args, **kw):
-        manipulate = kw.pop('manipulate', True)
-        return self.collection.find_and_modify(manipulate=manipulate, *args, **kw)
+    def find_and_modify(self, query=None, update=None,
+                        upsert=False, sort=None, full_response=False,
+                        manipulate=True, **kwargs):
+
+        query = query and query or {}
+        return self.collection.find_and_modify(query=query, update=update, upsert=upsert,
+                                               sort=sort, full_response=full_response, manipulate=manipulate,
+                                               **kwargs)
 
     def __getattr__(self, item):
         return CollectionMethod(self.collection, item)
