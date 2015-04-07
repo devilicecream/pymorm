@@ -7,7 +7,9 @@ Really simple pymongo-based ORM for MongoDB. The only requirements are Bunch and
               The fields in `__defaults__` can also be callable. The callable will be called the first time the document is 
               retrieved through the library.
     
-    * 0.3.3   Cleaner mapping for returned documents. No need to monkeypatch the Cursor class anymore
+    * 0.3.3   Cleaner mapping for returned documents. No need to monkeypatch the Cursor class anymore.
+    * 0.3.4   Overwritten default `find_and_modify` behavior, setting `manipulate=True` so that it returns an instance of
+              the mapped class instead of a dictionary.
 
 ## Example
 

@@ -39,6 +39,8 @@ try:
     assert next(Test.query.find({}).skip(1).limit(1)). __class__ == Test
     assert Test.query.find({}).skip(1).limit(1).explain().__class__ == Document
     assert user.remove() == 1, "Problem with delete"
+    result = Test.query.find_and_modify(query={}, update={"$set": {"gianni": 2}})
+    assert result.__class__ == Test
     assert len(Test.get_all({})) == 1, "Something went wrong, the number of documents is %s" % len(Test.get_all({}))
 finally:
     assert Test.query.remove({}).__class__ == Document

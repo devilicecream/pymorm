@@ -38,7 +38,6 @@ class CollectionMethod(object):
     def __call__(self, *args, **kwargs):
         result = getattr(self.collection, self.method)(*args, **kwargs)
         if type(result) == dict:
-            #print result, type(result)
             return Document(result)
         return result
 
@@ -46,6 +45,10 @@ class CollectionMethod(object):
 class Query(object):
     def __init__(self, collection):
         self.collection = collection
+
+    def find_and_modify(self, *args, **kw):
+        manipulate = kw.pop('manipulate', True)
+        return self.collection.find_and_modify(manipulate=manipulate, *args, **kw)
 
     def __getattr__(self, item):
         return CollectionMethod(self.collection, item)
