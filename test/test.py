@@ -33,7 +33,7 @@ try:
     user.happiness = "a lot!"
     print user
     print user2
-    user.commit()
+    user.save()
     assert [d for d in Test.query.find({})][0].__class__ == Test
     assert [d for d in Test.query.find({}).skip(1).limit(1)][0].__class__ == Test
     assert next(Test.query.find({}).skip(1).limit(1)). __class__ == Test
