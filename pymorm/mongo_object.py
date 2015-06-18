@@ -30,6 +30,8 @@ class MongoObjectMeta(type):
         try:
             mcs.resolve_indexes(result)
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             log.error(e)
             raise OperationFailure("Can not resolve the indexes. ")
         return result
@@ -43,10 +45,16 @@ class MongoObjectMeta(type):
         The indexes specified in the `__unique_indexes__` array will be created as unique.
         """
         # Get existing indexes
-        existing_indexes = filter(lambda x: not x[1].get('unique') and not x[0] == '_id_',
-                                  cls.query.index_information().items())
-        existing_unique_indexes = filter(lambda x: x[1].get('unique'),
-                                         cls.query.index_information().items())
+        try:
+            # Catch OperationFailure raised by MongoDB > 3.0 with WiredTiger if the collection doesn't already exist.
+            current_indexes = cls.query.index_information().items()
+            existing_indexes = filter(lambda x: not x[1].get('unique') and not x[0] == '_id_',
+                                      current_indexes)
+            existing_unique_indexes = filter(lambda x: x[1].get('unique'),
+                                             current_indexes)
+        except OperationFailure:
+            existing_indexes = []
+            existing_unique_indexes = []
         # Normalize indexes
         indexes = [i if hasattr(i[0], '__iter__') else [i] for i in cls.__indexes__]
         unique_indexes = [i if hasattr(i[0], '__iter__') else [i] for i in cls.__unique_indexes__]
