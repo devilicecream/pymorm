@@ -10,10 +10,21 @@ log = logging.getLogger('pymorm')
 
 
 class MongoObjectMeta(type):
+    """
+    Metaclass for the Pymorm mapped classes. It will bind the
+    database connection to the class, and add the `MappedSONManipulator`,
+    required to return the query results as a mapped class instance (or `Document`)
+    instead of a dict.
+    It also resolves the indexes as specified in the mapped class properties.
+    """
     def __new__(mcs, *args, **kwargs):
+        """
+        Create the mapped class.
+        Set `__collection__.mappedclass` to use it in the `MappedSONManipulator`.
+        Adding the `query` property to use it as a collection method wrapper.
+        """
         result = type(*args)
         result.__collection__.mappedclass = result
-        result.__collection__.database.connection.document_class = Document
         result.__collection__.database.add_son_manipulator(MappedSONManipulator())
         result.query = Query(result.__collection__)
         try:
@@ -25,6 +36,13 @@ class MongoObjectMeta(type):
 
     @classmethod
     def resolve_indexes(mcs, cls):
+        """
+        Resolve the indexes as stated by the class properties
+        `__indexes__` and `__unique_indexes__`.
+        The indexes specified in the `__indexes__` array will be created not unique.
+        The indexes specified in the `__unique_indexes__` array will be created as unique.
+        """
+        # Get existing indexes
         existing_indexes = filter(lambda x: not x[1].get('unique') and not x[0] == '_id_',
                                   cls.query.index_information().items())
         existing_unique_indexes = filter(lambda x: x[1].get('unique'),
@@ -51,11 +69,33 @@ class MongoObjectMeta(type):
 
 
 class MongoObject(Document):
+    """
+    Superclass for every mapped class using Pymorm.
+
+    Every subclass must have `MongoObjectMeta` as `__metaclass__`.
+
+    The `__defaults__` attribute is used to give default values to the created documents.
+    No schema is enforced using the `__defaults__` attribute.
+
+    The `__indexes__` and `__unique_indexes__` attributes are array of MongoDB indexes,
+    specified as ('<index_field>', ASCENDING/DESCENDING) in case of a single index,
+    [('<field_one>', ASCENDING/DESCENDING), ('<field_two>', ASCENDING/DESCENDING)] in case
+    of a combined index.
+    """
     __defaults__ = {}
     __indexes__ = []
     __unique_indexes__ = []
 
     def __init__(self, *args, **kw):
+        """
+        Creates a new instance of the mapped class and assign the default values if
+        not already set.
+        If a default value is callable, it will call it and assign the return value to
+        the field.
+        :param args: same as `dict` type.
+        :param kw: same as `dict` type.
+        :return: A new mappedclass instance.
+        """
         super(MongoObject, self).__init__(*args, **kw)
         for key, value in self.__defaults__.items():
             if not self.get(key):
@@ -63,23 +103,51 @@ class MongoObject(Document):
 
     @classmethod
     def add(cls, document):
+        """
+        Insert a new document in the database and return it.
+        :param document: The document to insert, casting it to a new mapped class instance,
+                         to verify it is an usable document, in case the `__init__` method
+                         is overridden with some validation.
+        :return: The inserted object as a mapped class instance.
+        """
         new_id = ObjectId(cls.query.insert(cls(document)))
         return cls.query.find_one({"_id": new_id})
 
     @classmethod
     def get_all(cls, *args, **kw):
+        """
+        Returns all the results of a given simple query, avoiding the need to iterate over the Cursor.
+        :param args: *args for the collection `find` method
+        :param kw: **kw for the collection `find` method
+        :return: A list of mapped class instances with the query results.
+        """
         cursor = cls.query.find(*args, **kw)
         return [d for d in cursor]
 
-    def remove(self):
+    def remove(self, silent_fail=False):
+        """
+        Remove the current object from the database. Raise `OperationFailure` if something goes wrong.
+        :param silent_fail: If `True`, doesn't raise if the result from MongoDB shows that something went wrong.
+                            Default to `False`.
+        :return: The number of documents actually removed from the database (should always be 1).
+        """
         result = self.__class__.query.remove({"_id": self._id})
-        if not result['ok']:
+        if not result['ok'] and not silent_fail:
             raise OperationFailure("Can not delete the document")
         return result['n']
 
     def save(self, silent_fail=True):
+        """
+        Save the local changes to the object into the database.
+        Raise `OperationFailure` if something goes wrong or there's no documents in the database with the local
+        object `_id` field.
+        :param silent_fail: If `True`, doesn't raise if the result from MongoDB shows that something went wrong.
+                            Default to `True`.
+        :return: The updated document.
+        """
         result = self.__class__.query.update({"_id": self._id}, self)
-        if not silent_fail and result.updatedExisting is not True:
+        if result.updatedExisting is not True and not silent_fail:
             raise OperationFailure("The document to update doesn't exist anymore. "
-                                   "Updates to the `_id` field are not allowed through `commit`.")
+                                   "Updates to the `_id` field are not allowed through `save`.")
         return result
+
