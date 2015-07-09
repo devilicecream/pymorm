@@ -30,8 +30,6 @@ class MongoObjectMeta(type):
         try:
             mcs.resolve_indexes(result)
         except Exception as e:
-            import traceback
-            traceback.print_exc()
             log.error(e)
             raise OperationFailure("Can not resolve the indexes. ")
         return result
@@ -52,14 +50,18 @@ class MongoObjectMeta(type):
                                       current_indexes)
             existing_unique_indexes = filter(lambda x: x[1].get('unique'),
                                              current_indexes)
+            existing_sparse_indexes = filter(lambda x: x[1].get('sparse'),
+                                             current_indexes)
         except OperationFailure:
             existing_indexes = []
             existing_unique_indexes = []
+            existing_sparse_indexes = []
         # Normalize indexes
         indexes = [i if hasattr(i[0], '__iter__') else [i] for i in cls.__indexes__]
         unique_indexes = [i if hasattr(i[0], '__iter__') else [i] for i in cls.__unique_indexes__]
+        sparse_indexes = [i if hasattr(i[0], '__iter__') else [i] for i in cls.__sparse_indexes__]
 
-        def check_indexes(_indexes, _existing, unique):
+        def check_indexes(_indexes, _existing, unique, sparse=False):
             for index in _existing:
                 key = index[1]['key']
                 if key in _indexes:
@@ -70,10 +72,11 @@ class MongoObjectMeta(type):
                     cls.query.drop_index(index[0])
             for new_index in _indexes:
                 # New index
-                cls.query.create_index(new_index, unique=unique)
+                cls.query.create_index(new_index, unique=unique, sparse=sparse)
 
         check_indexes(indexes, existing_indexes, unique=False)
         check_indexes(unique_indexes, existing_unique_indexes, unique=True)
+        check_indexes(sparse_indexes, existing_sparse_indexes, unique=True, sparse=True)
 
 
 class MongoObject(Document):
@@ -93,6 +96,7 @@ class MongoObject(Document):
     __defaults__ = {}
     __indexes__ = []
     __unique_indexes__ = []
+    __sparse_indexes__ = []
 
     def __init__(self, *args, **kw):
         """

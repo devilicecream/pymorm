@@ -3,6 +3,8 @@ Really simple pymongo-based ODM for MongoDB. The only requirements are Bunch and
 
 ## Updates
 
+ * **0.4.3**   Added missing support to sparse indexes.
+ 
  * **0.4.2**   Added MongoDB>=3.0 with WiredTiger support.
  
  * **0.4.1**   Added pymongo>=3.0 support. Documentation improved.
