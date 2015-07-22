@@ -96,6 +96,7 @@ class MongoObject(Document):
     of a combined index.
     """
     __defaults__ = {}
+    __dont_resolve_indexes__ = False
     __indexes__ = []
     __unique_indexes__ = []
     __sparse_indexes__ = []
