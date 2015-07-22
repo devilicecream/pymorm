@@ -20,6 +20,8 @@ class MappedSONManipulator(SONManipulator):
           - `son`: the SON object being retrieved from the database
           - `collection`: the collection this object was stored in
         """
+        if son is None:
+            return son
         if not isinstance(collection.mappedclass, collection.__class__) and son.get('_id'):
             return collection.mappedclass(son)
         else:
