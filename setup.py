@@ -24,7 +24,7 @@ install_requires = [
 
 setup(
     name='pymorm',
-    version='0.4.3',
+    version='0.4.4',
     description='Really simple pymongo-based ODM',
     author='Walter Danilo Galante',
     author_email='walter.galante@proxtome.com',
