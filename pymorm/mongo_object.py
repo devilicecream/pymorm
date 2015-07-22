@@ -42,6 +42,8 @@ class MongoObjectMeta(type):
         The indexes specified in the `__indexes__` array will be created not unique.
         The indexes specified in the `__unique_indexes__` array will be created as unique.
         """
+        if cls.__dont_resolve_indexes__ == True:
+            return
         # Get existing indexes
         try:
             # Catch OperationFailure raised by MongoDB > 3.0 with WiredTiger if the collection doesn't already exist.
