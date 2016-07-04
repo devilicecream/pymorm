@@ -30,8 +30,8 @@ class MongoObjectMeta(type):
         try:
             mcs.resolve_indexes(result)
         except Exception as e:
-            log.error(e)
-            raise OperationFailure("Can not resolve the indexes. ")
+            raise OperationFailure(e)
+            # raise OperationFailure("Can not resolve the indexes. ")
         return result
 
     @classmethod
