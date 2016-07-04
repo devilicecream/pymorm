@@ -3,8 +3,10 @@ Really simple pymongo-based ODM for MongoDB. The only requirements are Bunch and
 
 ## Updates
 
+ * **0.4.7**   Better explaining errors at index resolution stage.
+
  * **0.4.6**   Index resolution is not mandatory anymore.
- 
+
  * **0.4.4**   Fixed manipulator to avoid errors if `None` is returned by a query.
  
  * **0.4.3**   Added missing support to sparse indexes.
