@@ -3,7 +3,7 @@ Really simple pymongo-based ODM for MongoDB. The only requirements are Bunch and
 
 ## Updates
  
- * **0.4.8**   Solved bug overwriting False/None values with the default value.
+ * **0.4.9**   Solved bug overwriting False/None values with the default value.
  
  * **0.4.7**   Better explaining errors at index resolution stage.
 
