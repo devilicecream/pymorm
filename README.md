@@ -2,7 +2,9 @@
 Really simple pymongo-based ODM for MongoDB. The only requirements are Bunch and, obviously, pymongo.
 
 ## Updates
-
+ 
+ * **0.4.8**   Solved bug overwriting False/None values with the default value.
+ 
  * **0.4.7**   Better explaining errors at index resolution stage.
 
  * **0.4.6**   Index resolution is not mandatory anymore.

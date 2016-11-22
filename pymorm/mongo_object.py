@@ -9,6 +9,10 @@ import logging
 log = logging.getLogger('pymorm')
 
 
+class AbsentValue(object):
+    pass
+
+
 class MongoObjectMeta(type):
     """
     Metaclass for the Pymorm mapped classes. It will bind the
@@ -113,7 +117,7 @@ class MongoObject(Document):
         """
         super(MongoObject, self).__init__(*args, **kw)
         for key, value in self.__defaults__.items():
-            if not self.get(key):
+            if self.get(key, AbsentValue) is not AbsentValue:
                 self[key] = hasattr(value, '__call__') and value() or value
 
     @classmethod
